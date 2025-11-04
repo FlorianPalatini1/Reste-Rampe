@@ -1,0 +1,6 @@
+/* Tailwind directives — keep enabled so Tailwind generates utility CSS during the build. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Keep this file only for Tailwind directives so editor lint won't flag @apply/@tailwind in main.css */

@@ -1,0 +1,64 @@
+version: '3.8'
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        - SKIP_TRANSCODE=1
+    image: reste-rampe-frontend:dev
+    ports:
+      - "5173:80"
+    environment:
+      - VITE_API_URL=${VITE_API_URL:-http://localhost:8000/api}
+    networks:
+      - reste_net
+    depends_on:
+      - backend
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: reste-rampe-backend:dev
+    environment:
+      - DATABASE_URL=postgresql://reste:replace_with_password@db:5432/reste-rampe-db
+      - GEMINI_API_KEY=AIzaSyDU7Y1wNXC1VoijaStknYzqdHS5nv1O81M
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    networks:
+      - reste_net
+
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: reste
+      POSTGRES_PASSWORD: replace_with_password
+      POSTGRES_DB: reste-rampe-db
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - reste_net
+
+volumes:
+  db-data:
+
+networks:
+  reste_net:
+    driver: bridge
+# This compose assumes you have a Docker network named 'reste_net' and your Postgres
+# container (named 'reste-rampe') is attached to that network so hostname resolution
+# (reste-rampe) works from the backend container. To create and attach the container:
+#
+#   docker network create reste_net
+#   docker network connect reste_net reste-rampe
+#
+# Then start this compose with:
+#
+#   DATABASE_URL=postgresql://reste:replace_with_password@reste-rampe:5432/reste-rampe-db \
+#     VITE_API_URL=http://localhost:8000/api \
+#     docker compose -f docker-compose.dev.yml up --build

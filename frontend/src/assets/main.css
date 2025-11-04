@@ -1,0 +1,37 @@
+body {
+  background-color: #f9fafb; /* fallback background similar to bg-gray-50 */
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track { background-color: #f3f4f6; }
+
+::-webkit-scrollbar-thumb { background-color: #9ca3af; border-radius: 9999px; }
+
+::-webkit-scrollbar-thumb:hover { background-color: #6b7280; }
+
+/* Vintage / 1930s icon utilities */
+.icon-sepia {
+  /* warm brown tone similar to the quick action bar */
+  color: #6b4f35; /* currentColor for text and SVG fills */
+  filter: sepia(35%) saturate(80%) contrast(95%);
+}
+
+/* More pronounced 1930s-styled icons: thicker strokes, slight offset shadow */
+.icon-1930s svg, .icon-1930s > svg {
+  stroke-width: 2.5 !important; /* make line icons feel heavier */
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+/* Apply a subtle paper grain overlay for inline icon backgrounds when needed */
+.icon-grain {
+  background-image: radial-gradient(rgba(0,0,0,0.02) 1px, transparent 1px);
+  background-size: 3px 3px;
+}
+
+/* Utility to ensure SVG icons use currentColor for strokes/fills */
+.icon-force-current svg { fill: currentColor !important; stroke: currentColor !important; }

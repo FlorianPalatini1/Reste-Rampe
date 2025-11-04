@@ -1,0 +1,14 @@
+FROM node:18-slim
+
+WORKDIR /app
+
+COPY frontend/package.json ./
+COPY frontend/package-lock.json ./
+
+RUN npm ci --silent
+
+COPY frontend/ .
+
+EXPOSE 5173
+
+CMD ["/bin/bash", "-c", "npm exec vite -- --host 0.0.0.0"]

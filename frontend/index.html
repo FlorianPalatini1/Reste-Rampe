@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Reste Rampe - Smart Grocery Management</title>
+    <link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&display=swap" rel="stylesheet">
+    <style>
+      /* Minimal masthead override with underline and slight upward offset */
+      .masthead-hero {
+        font-family: 'Abril Fatface', Georgia, serif !important;
+        font-size:96px !important;
+        text-decoration: underline solid #201710 6px !important;
+        text-decoration-thickness: 6px !important;
+        text-underline-offset: 12px !important;
+        /* nudge up a bit so the headline sits higher on the page */
+        margin-top: -18px !important;
+        transform: translateY(-6px);
+      }
+      @media (max-width:1024px){
+        .masthead-hero{
+          font-size:64px !important;
+          text-decoration-thickness:4px !important;
+          text-underline-offset:8px !important;
+          margin-top: -12px !important;
+          transform: translateY(-4px);
+        }
+      }
+      @media (max-width:480px){
+        .masthead-hero{
+          font-size:36px !important;
+          text-decoration-thickness:3px !important;
+          text-underline-offset:6px !important;
+          margin-top: -8px !important;
+          transform: translateY(-2px);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.js"></script>
+
+    <div id="landing-fallback" style="display:none;position:fixed;inset:0;align-items:center;justify-content:center;z-index:9999;background:rgba(250,248,243,0.96);">
+      <div style="max-width:900px;margin:4rem auto;padding:18px;background:#fbf6ef;border:1px solid rgba(0,0,0,0.06);box-shadow:0 10px 30px rgba(0,0,0,0.08);border-radius:8px;position:relative;">
+        <video id="fallbackVideo" playsinline muted autoplay poster="/landing_poster.jpg" style="width:100%;display:block;border-radius:6px;">
+          <source src="/landing.webm" type="video/webm">
+          <!-- MP4 source removed as requested -->
+          Your browser does not support the video tag.
+        </video>
+        <button id="fallbackSkip" style="position:absolute;right:12px;top:12px;background:rgba(255,255,255,0.9);border:1px solid rgba(0,0,0,0.06);padding:6px 10px;border-radius:6px;cursor:pointer;font-weight:600;">Skip</button>
+      </div>
+    </div>
+
+    <script>
+      (function(){
+        try{
+          var path = location.pathname.replace(/\/+$/,'') || '/';
+          if(path === '/landing' || path === '/'){
+            var fb = document.getElementById('landing-fallback');
+            var v = document.getElementById('fallbackVideo');
+            var s = document.getElementById('fallbackSkip');
+            if(fb && v){
+              fb.style.display = 'flex';
+              v.play && v.play().catch(function(){});
+              v.addEventListener('ended', function(){ try{ location.href = '/login' }catch(e){} });
+              s && s.addEventListener('click', function(){ try{ location.href = '/login' }catch(e){} });
+              window.addEventListener('load', function(){ setTimeout(function(){ fb.style.display='none'; }, 400); });
+            }
+          }
+        }catch(e){}
+      })();
+    </script>
+
+    <!-- diagnostic and fallback removed: SPA should render login view normally -->
+  </body>
+</html>

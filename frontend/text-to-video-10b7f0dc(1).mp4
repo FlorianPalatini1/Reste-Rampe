@@ -1,0 +1,56 @@
+services:
+  reste-rampe-db:
+    image: postgres:15
+    container_name: reste-rampe-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin}
+      POSTGRES_DB: ${POSTGRES_DB:-reste_rampe}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  reste-rampe-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: reste-rampe-backend
+    depends_on:
+      reste-rampe-db:
+        condition: service_healthy
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin}
+      POSTGRES_DB: ${POSTGRES_DB:-reste_rampe}
+      POSTGRES_HOST: reste-rampe-db
+      POSTGRES_PORT: 5432
+      DATABASE_URL: ${DATABASE_URL:-}
+    volumes:
+      - ./backend:/app:rw
+    entrypoint: ["/app/docker-entrypoint.sh"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  reste-rampe-frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    image: reste-rampe-frontend
+    container_name: reste-rampe-frontend
+    depends_on:
+      reste-rampe-backend:
+        condition: service_started
+    ports:
+      - "${FRONTEND_PORT:-5174}:80"
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+    driver: local
