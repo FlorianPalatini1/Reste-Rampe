@@ -1,0 +1,26 @@
+# Alembic Migration Scripts
+
+This folder contains Alembic migration scripts for the Reste-Rampe database.
+
+## Running Migrations
+
+```bash
+# Upgrade to the latest version
+alembic upgrade head
+
+# Downgrade one version
+alembic downgrade -1
+
+# Create a new migration
+alembic revision --autogenerate -m "description"
+
+# View current revision
+alembic current
+```
+
+## Migrations Applied
+
+- `add_user_timestamps.py` - Add created_at and last_login to users table
+- `add_user_id_to_ingredients.py` - Add user_id column to ingredients table
+- `add_email_verification.py` - Add email verification fields to users table
+- `add_mailbox_fields.py` - Add mailbox management fields to users table
