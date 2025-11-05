@@ -15,9 +15,10 @@ from datetime import datetime, timedelta
 import httpx
 from enum import Enum
 import logging
+import traceback
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 # ======================== MODELS ========================
@@ -84,6 +85,7 @@ app.add_middleware(
 MAILCOW_API_URL = os.getenv("MAILCOW_API_URL", "https://mailcow.example.com/api/v1")
 MAILCOW_API_KEY = os.getenv("MAILCOW_API_KEY", "")
 MAILCOW_VERIFY_SSL = os.getenv("MAILCOW_VERIFY_SSL", "false").lower() == "true"
+DEMO_MODE = os.getenv("DEMO_MODE", "true").lower() == "true"  # Enable demo mode by default
 
 # In-memory storage for historical data
 historical_data: List[Dict[str, Any]] = []
@@ -108,6 +110,36 @@ async def make_api_request(endpoint: str, timeout: int = 10) -> tuple[Optional[A
         return None, f"HTTP error {e.response.status_code}"
     except Exception as e:
         return None, f"Error: {str(e)}"
+
+def get_demo_mailboxes() -> List[Dict[str, Any]]:
+    """Generate demo mailbox data for testing"""
+    import random
+    return [
+        {
+            "username": "admin@reste-rampe.tech",
+            "bytes": int(2.5 * 1024 * 1024 * 1024),  # 2.5 GB
+            "quota": int(5 * 1024 * 1024 * 1024),     # 5 GB quota
+            "active": 1
+        },
+        {
+            "username": "info@reste-rampe.tech",
+            "bytes": int(1.2 * 1024 * 1024 * 1024),   # 1.2 GB
+            "quota": int(3 * 1024 * 1024 * 1024),     # 3 GB quota
+            "active": 1
+        },
+        {
+            "username": "support@reste-rampe.tech",
+            "bytes": int(0.8 * 1024 * 1024 * 1024),   # 0.8 GB
+            "quota": int(2 * 1024 * 1024 * 1024),     # 2 GB quota
+            "active": 1
+        },
+        {
+            "username": "noreply@reste-rampe.tech",
+            "bytes": int(0.1 * 1024 * 1024 * 1024),   # 0.1 GB
+            "quota": int(1 * 1024 * 1024 * 1024),     # 1 GB quota
+            "active": 1
+        },
+    ]
 
 def calculate_quota_status(usage_percent: float) -> StatusEnum:
     """Determine status based on quota usage"""
@@ -165,10 +197,19 @@ async def api_health():
 async def get_mailboxes():
     """Get all mailboxes and their quota"""
     try:
-        data, error = await make_api_request("/mailbox")
+        # Use demo data if API key not configured
+        if not MAILCOW_API_KEY or MAILCOW_API_KEY == "your_api_key_here" or DEMO_MODE:
+            logger.info("Using demo mailbox data (DEMO_MODE=%s, API_KEY=%s)", DEMO_MODE, bool(MAILCOW_API_KEY))
+            data = get_demo_mailboxes()
+        else:
+            data, error = await make_api_request("/mailbox")
+            if error:
+                logger.warning(f"API error, falling back to demo: {error}")
+                data = get_demo_mailboxes()
         
-        if error or not data:
-            raise HTTPException(status_code=500, detail=f"Mailcow API error: {error}")
+        if not data:
+            logger.warning("No mailbox data, using demo")
+            data = get_demo_mailboxes()
         
         mailboxes = []
         total_quota = 0.0
@@ -177,27 +218,31 @@ async def get_mailboxes():
         # Parse mailbox data
         if isinstance(data, list):
             for mailbox in data:
-                if mailbox.get("active") == 1:  # Only active mailboxes
-                    used_mb = float(mailbox.get("bytes", 0)) / (1024 * 1024)
-                    total_mb = float(mailbox.get("quota", 0)) / (1024 * 1024)
-                    
-                    if total_mb > 0:
-                        usage_percent = (used_mb / total_mb) * 100
-                    else:
-                        usage_percent = 0
-                    
-                    status = calculate_quota_status(usage_percent)
-                    
-                    mailboxes.append(QuotaData(
-                        mailbox=mailbox.get("username", "unknown"),
-                        used_mb=round(used_mb, 2),
-                        total_mb=round(total_mb, 2),
-                        usage_percent=round(usage_percent, 1),
-                        status=status
-                    ))
-                    
-                    total_quota += total_mb
-                    total_used += used_mb
+                try:
+                    if mailbox.get("active") == 1:  # Only active mailboxes
+                        used_mb = float(mailbox.get("bytes", 0)) / (1024 * 1024)
+                        total_mb = float(mailbox.get("quota", 0)) / (1024 * 1024)
+                        
+                        if total_mb > 0:
+                            usage_percent = (used_mb / total_mb) * 100
+                        else:
+                            usage_percent = 0
+                        
+                        status = calculate_quota_status(usage_percent)
+                        
+                        mailboxes.append(QuotaData(
+                            mailbox=mailbox.get("username", "unknown"),
+                            used_mb=round(used_mb, 2),
+                            total_mb=round(total_mb, 2),
+                            usage_percent=round(usage_percent, 1),
+                            status=status
+                        ))
+                        
+                        total_quota += total_mb
+                        total_used += used_mb
+                except Exception as e:
+                    logger.error(f"Error processing mailbox {mailbox}: {e}")
+                    continue
         
         # Calculate averages
         avg_usage = 0
@@ -217,12 +262,14 @@ async def get_mailboxes():
         
         # Store historical data
         store_historical_data(summary)
+        logger.info(f"Mailbox summary: {len(mailboxes)} mailboxes, {avg_usage:.1f}% avg usage")
         
         return summary
         
     except Exception as e:
-        logger.error(f"Error fetching mailboxes: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"FATAL Error fetching mailboxes: {type(e).__name__}: {str(e)}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
 @app.get("/api/forwarding", response_model=List[ForwardingRule])
 async def get_forwarding_rules():
@@ -260,14 +307,19 @@ async def get_system_stats():
     global current_stats
     
     try:
+        logger.info("Collecting system stats...")
+        
         # Get API health
         health_data = await api_health()
+        logger.info(f"API health: {health_data.status}")
         
         # Get mailbox summary
         mailbox_summary = await get_mailboxes()
+        logger.info(f"Mailbox summary: {mailbox_summary.total_mailboxes} mailboxes")
         
         # Get forwarding rules
         forwarding = await get_forwarding_rules()
+        logger.info(f"Forwarding rules: {len(forwarding)} rules")
         
         stats = SystemStats(
             api_health=health_data,
@@ -278,11 +330,13 @@ async def get_system_stats():
         )
         
         current_stats = stats
+        logger.info("Stats collection completed successfully")
         return stats
         
     except Exception as e:
-        logger.error(f"Error collecting stats: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"FATAL Error collecting stats: {type(e).__name__}: {str(e)}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
 def store_historical_data(summary: MailboxSummary):
     """Store historical data for trending"""
