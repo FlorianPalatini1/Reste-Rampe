@@ -306,21 +306,21 @@ async def get_system_stats():
     """Get complete system statistics"""
     global current_stats
     
+    logger.info("=== START get_system_stats ===")
     try:
-        logger.info("Collecting system stats...")
-        
-        # Get API health
+        logger.info("Step 1: Getting API health...")
         health_data = await api_health()
-        logger.info(f"API health: {health_data.status}")
+        logger.info(f"  ✓ API health: {health_data.status}")
         
-        # Get mailbox summary
+        logger.info("Step 2: Getting mailbox summary...")
         mailbox_summary = await get_mailboxes()
-        logger.info(f"Mailbox summary: {mailbox_summary.total_mailboxes} mailboxes")
+        logger.info(f"  ✓ Mailboxes: {mailbox_summary.total_mailboxes}")
         
-        # Get forwarding rules
+        logger.info("Step 3: Getting forwarding rules...")
         forwarding = await get_forwarding_rules()
-        logger.info(f"Forwarding rules: {len(forwarding)} rules")
+        logger.info(f"  ✓ Forwarding rules: {len(forwarding)}")
         
+        logger.info("Step 4: Creating stats object...")
         stats = SystemStats(
             api_health=health_data,
             mailbox_summary=mailbox_summary,
@@ -330,13 +330,14 @@ async def get_system_stats():
         )
         
         current_stats = stats
-        logger.info("Stats collection completed successfully")
+        logger.info("=== COMPLETE get_system_stats ===")
         return stats
         
     except Exception as e:
-        logger.error(f"FATAL Error collecting stats: {type(e).__name__}: {str(e)}")
+        error_msg = f"{type(e).__name__}: {str(e)}"
+        logger.error(f"FATAL Error in get_system_stats: {error_msg}")
         logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=error_msg)
 
 def store_historical_data(summary: MailboxSummary):
     """Store historical data for trending"""
