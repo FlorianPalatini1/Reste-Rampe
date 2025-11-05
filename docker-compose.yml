@@ -79,6 +79,47 @@ services:
       timeout: 5s
       retries: 5
 
+  # ==================== MONITORING SERVICES ====================
+  monitoring-backend:
+    build:
+      context: ./monitoring/backend
+      dockerfile: Dockerfile
+    image: reste-rampe-monitoring-backend:latest
+    container_name: reste-rampe-monitoring-backend
+    environment:
+      - MAILCOW_API_URL=${MAILCOW_API_URL}
+      - MAILCOW_API_KEY=${MAILCOW_API_KEY}
+      - MAILCOW_VERIFY_SSL=${MAILCOW_VERIFY_SSL:-false}
+    ports:
+      - "8888:8888"
+    networks:
+      - reste_net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8888/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  monitoring-frontend:
+    build:
+      context: ./monitoring/frontend
+      dockerfile: Dockerfile
+    image: reste-rampe-monitoring-frontend:latest
+    container_name: reste-rampe-monitoring-frontend
+    depends_on:
+      - monitoring-backend
+    networks:
+      - reste_net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
 volumes:
   db-data:
     driver: local

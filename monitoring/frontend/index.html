@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mailcow Monitoring Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <style>
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+        .status-healthy {
+            background-color: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+        }
+        .status-warning {
+            background-color: rgba(234, 179, 8, 0.2);
+            color: #eab308;
+        }
+        .status-critical {
+            background-color: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+        .card {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid rgba(71, 85, 105, 0.3);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
+    <div id="app">
+        <!-- Header -->
+        <header class="border-b border-slate-700 bg-slate-900/50 backdrop-blur-sm sticky top-0 z-40">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="text-2xl">🐮</div>
+                        <div>
+                            <h1 class="text-2xl font-bold">Mailcow Monitoring</h1>
+                            <p class="text-sm text-slate-400">Real-time Performance Dashboard</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <div class="text-right">
+                            <p class="text-sm text-slate-400">Last Update</p>
+                            <p class="text-lg font-mono" id="lastUpdate">--:--:--</p>
+                        </div>
+                        <button
+                            onclick="refreshData()"
+                            id="refreshBtn"
+                            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition disabled:opacity-50"
+                        >
+                            🔄 Refresh
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Error Alert -->
+            <div id="errorAlert" class="hidden mb-6 p-4 bg-red-900/20 border border-red-700 rounded-lg text-red-200">
+                <p class="font-semibold">⚠️ Error</p>
+                <p id="errorMessage"></p>
+            </div>
+
+            <!-- Loading State -->
+            <div id="loadingState" class="text-center py-12">
+                <div class="inline-block text-4xl animate-spin">⏳</div>
+                <p class="mt-4 text-slate-400">Loading dashboard...</p>
+            </div>
+
+            <!-- Content (Hidden initially) -->
+            <div id="content" class="hidden">
+                <!-- Status Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                    <!-- API Health -->
+                    <div class="card">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-slate-400">API Health</p>
+                                <p class="text-2xl font-bold mt-2" id="apiHealth">N/A</p>
+                                <p class="text-xs text-slate-500 mt-1" id="apiResponseTime">0ms</p>
+                            </div>
+                            <div class="text-3xl" id="apiHealthIcon">❓</div>
+                        </div>
+                    </div>
+
+                    <!-- Total Mailboxes -->
+                    <div class="card">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-slate-400">Mailboxes</p>
+                                <p class="text-2xl font-bold mt-2" id="totalMailboxes">0</p>
+                                <p class="text-xs text-slate-500 mt-1">Active</p>
+                            </div>
+                            <div class="text-3xl">📧</div>
+                        </div>
+                    </div>
+
+                    <!-- Average Usage -->
+                    <div class="card">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-slate-400">Avg Usage</p>
+                                <p class="text-2xl font-bold mt-2" id="avgUsage">0%</p>
+                                <p class="text-xs text-slate-500 mt-1">of Total Quota</p>
+                            </div>
+                            <div class="text-3xl">📊</div>
+                        </div>
+                    </div>
+
+                    <!-- Total Storage -->
+                    <div class="card">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-slate-400">Total Usage</p>
+                                <p class="text-2xl font-bold mt-2"><span id="totalUsed">0 MB</span> / <span id="totalQuota">0 MB</span></p>
+                                <p class="text-xs text-slate-500 mt-1">Storage</p>
+                            </div>
+                            <div class="text-3xl">💾</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mailboxes Table -->
+                <div class="card mb-8">
+                    <h2 class="text-xl font-bold mb-4">📬 Mailbox Usage</h2>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="border-b border-slate-700">
+                                    <th class="text-left py-3 px-4 text-slate-300 font-semibold">Mailbox</th>
+                                    <th class="text-right py-3 px-4 text-slate-300 font-semibold">Used</th>
+                                    <th class="text-right py-3 px-4 text-slate-300 font-semibold">Total</th>
+                                    <th class="text-right py-3 px-4 text-slate-300 font-semibold">Usage %</th>
+                                    <th class="text-center py-3 px-4 text-slate-300 font-semibold">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="mailboxesTableBody">
+                                <!-- Populated by JavaScript -->
+                            </tbody>
+                        </table>
+                        <div id="noMailboxes" class="py-8 px-4 text-center text-slate-400">
+                            No mailboxes available or API key not configured
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                    <!-- Usage Trend -->
+                    <div class="card">
+                        <h3 class="text-lg font-bold mb-4">📈 Usage Trend</h3>
+                        <canvas id="usageTrendChart"></canvas>
+                    </div>
+
+                    <!-- Mailbox Distribution -->
+                    <div class="card">
+                        <h3 class="text-lg font-bold mb-4">📊 Mailbox Distribution</h3>
+                        <canvas id="distributionChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Forwarding Rules -->
+                <div id="forwardingSection" class="card hidden">
+                    <h2 class="text-xl font-bold mb-4">🔀 Forwarding Rules</h2>
+                    <div id="forwardingRules" class="space-y-3">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const API_BASE = '/api/monitoring';
+        let usageTrendChart = null;
+        let distributionChart = null;
+        const usageHistory = [];
+
+        function getStatusIcon(status) {
+            const icons = {
+                'HEALTHY': '✅',
+                'WARNING': '⚠️',
+                'CRITICAL': '❌'
+            };
+            return icons[status] || '❓';
+        }
+
+        function getStatusColor(usage) {
+            if (usage >= 90) return 'bg-red-500';
+            if (usage >= 75) return 'bg-yellow-500';
+            return 'bg-green-500';
+        }
+
+        function getStatusBadgeClass(status) {
+            const classes = {
+                'HEALTHY': 'status-healthy',
+                'WARNING': 'status-warning',
+                'CRITICAL': 'status-critical'
+            };
+            return classes[status] || 'status-healthy';
+        }
+
+        function formatBytes(mb) {
+            if (mb >= 1024) {
+                return (mb / 1024).toFixed(1) + ' GB';
+            }
+            return mb.toFixed(1) + ' MB';
+        }
+
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('lastUpdate').textContent = now.toLocaleTimeString();
+        }
+
+        async function refreshData() {
+            const refreshBtn = document.getElementById('refreshBtn');
+            refreshBtn.disabled = true;
+            refreshBtn.textContent = '⏳ Loading...';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/stats`);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                updateDashboard(data);
+                updateTime();
+
+                document.getElementById('errorAlert').classList.add('hidden');
+            } catch (error) {
+                console.error('Error fetching stats:', error);
+                document.getElementById('errorMessage').textContent = error.message;
+                document.getElementById('errorAlert').classList.remove('hidden');
+            } finally {
+                refreshBtn.disabled = false;
+                refreshBtn.textContent = '🔄 Refresh';
+            }
+        }
+
+        function updateDashboard(data) {
+            // Show content, hide loading
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('content').classList.remove('hidden');
+
+            const stats = data;
+
+            // API Health
+            document.getElementById('apiHealth').textContent = stats.api_health.status;
+            document.getElementById('apiResponseTime').textContent = stats.api_health.response_time_ms.toFixed(0) + 'ms';
+            document.getElementById('apiHealthIcon').textContent = getStatusIcon(stats.api_health.status);
+
+            // Summary Stats
+            const summary = stats.mailbox_summary;
+            document.getElementById('totalMailboxes').textContent = summary.total_mailboxes;
+            document.getElementById('avgUsage').textContent = summary.average_usage_percent.toFixed(1) + '%';
+            document.getElementById('totalUsed').textContent = formatBytes(summary.total_used_mb);
+            document.getElementById('totalQuota').textContent = formatBytes(summary.total_quota_mb);
+
+            // Mailboxes Table
+            const tbody = document.getElementById('mailboxesTableBody');
+            const noMailboxes = document.getElementById('noMailboxes');
+            
+            if (summary.mailboxes.length > 0) {
+                tbody.innerHTML = summary.mailboxes.map(mailbox => `
+                    <tr class="border-b border-slate-700/50 hover:bg-slate-700/20 transition">
+                        <td class="py-3 px-4 font-mono text-sm">${mailbox.mailbox}</td>
+                        <td class="py-3 px-4 text-right">${formatBytes(mailbox.used_mb)}</td>
+                        <td class="py-3 px-4 text-right">${formatBytes(mailbox.total_mb)}</td>
+                        <td class="py-3 px-4 text-right">
+                            <div class="w-24 h-2 bg-slate-700 rounded-full overflow-hidden ml-auto mb-1">
+                                <div class="h-full rounded-full ${getStatusColor(mailbox.usage_percent)}" 
+                                     style="width: ${mailbox.usage_percent}%"></div>
+                            </div>
+                            <p class="text-xs text-slate-400">${mailbox.usage_percent.toFixed(1)}%</p>
+                        </td>
+                        <td class="py-3 px-4 text-center">
+                            <span class="status-badge ${getStatusBadgeClass(mailbox.status)}">
+                                ${mailbox.status}
+                            </span>
+                        </td>
+                    </tr>
+                `).join('');
+                noMailboxes.classList.add('hidden');
+            } else {
+                tbody.innerHTML = '';
+                noMailboxes.classList.remove('hidden');
+            }
+
+            // Add to history
+            usageHistory.push({
+                time: new Date().toLocaleTimeString(),
+                usage: summary.average_usage_percent,
+                timestamp: new Date()
+            });
+
+            // Keep last 20 data points
+            if (usageHistory.length > 20) {
+                usageHistory.shift();
+            }
+
+            // Update charts
+            updateCharts(summary);
+
+            // Forwarding Rules
+            if (stats.forwarding_rules && stats.forwarding_rules.length > 0) {
+                document.getElementById('forwardingSection').classList.remove('hidden');
+                document.getElementById('forwardingRules').innerHTML = stats.forwarding_rules.map(rule => `
+                    <div class="flex items-center justify-between p-3 bg-slate-700/30 rounded border border-slate-600/50">
+                        <div class="flex-1">
+                            <p class="font-mono text-sm">${rule.source}</p>
+                            <p class="text-xs text-slate-400 mt-1">→ ${rule.destinations.join(', ')}</p>
+                        </div>
+                        <div>
+                            ${rule.active ? 
+                                '<span class="status-badge status-healthy">✓ Active</span>' :
+                                '<span class="status-badge status-critical">✗ Inactive</span>'
+                            }
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function updateCharts(summary) {
+            const ctx1 = document.getElementById('usageTrendChart');
+            const ctx2 = document.getElementById('distributionChart');
+
+            // Usage Trend Chart
+            if (usageTrendChart) usageTrendChart.destroy();
+            usageTrendChart = new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: usageHistory.map(d => d.time),
+                    datasets: [{
+                        label: 'Average Usage %',
+                        data: usageHistory.map(d => d.usage),
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#cbd5e1' }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            max: 100,
+                            ticks: { color: '#94a3b8' },
+                            grid: { color: 'rgba(71, 85, 105, 0.2)' }
+                        },
+                        x: {
+                            ticks: { color: '#94a3b8' },
+                            grid: { color: 'rgba(71, 85, 105, 0.2)' }
+                        }
+                    }
+                }
+            });
+
+            // Distribution Chart
+            if (distributionChart) distributionChart.destroy();
+            
+            const topMailboxes = summary.mailboxes.slice(0, 5);
+            const others = summary.mailboxes.slice(5).reduce((sum, m) => sum + m.used_mb, 0);
+            
+            distributionChart = new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels: [...topMailboxes.map(m => m.mailbox), ...(others > 0 ? ['Others'] : [])],
+                    datasets: [{
+                        data: [...topMailboxes.map(m => m.used_mb), ...(others > 0 ? [others] : [])],
+                        backgroundColor: [
+                            '#ef4444',
+                            '#f97316',
+                            '#eab308',
+                            '#84cc16',
+                            '#22c55e',
+                            '#10b981'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#cbd5e1' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Initial load
+        window.addEventListener('load', () => {
+            updateTime();
+            refreshData();
+            
+            // Auto-refresh every 30 seconds
+            setInterval(refreshData, 30000);
+            
+            // Update time every second
+            setInterval(updateTime, 1000);
+        });
+    </script>
+</body>
+</html>
