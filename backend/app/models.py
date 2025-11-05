@@ -26,8 +26,16 @@ class User(Base):
     email = Column(String(255), unique=True, nullable=True)
     hashed_password = Column(String(255), nullable=False)
     is_admin = Column(Boolean, default=False)
+    is_email_verified = Column(Boolean, default=False)
+    email_verification_token = Column(String(255), nullable=True, unique=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     last_login = Column(DateTime, nullable=True)
+    # Mailcow integration fields
+    mailbox_enabled = Column(Boolean, default=False)  # Has mailbox been created?
+    mailbox_password_hash = Column(String(255), nullable=True)  # Encrypted mailbox password
+    mailbox_quota_mb = Column(Integer, default=5120)  # 5GB default
+    mailbox_created_at = Column(DateTime, nullable=True)  # When mailbox was created
+    mailbox_active = Column(Boolean, default=True)  # Is mailbox currently active?
 
 
 class ShoppingList(Base):

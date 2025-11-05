@@ -25,7 +25,29 @@
             </div>
             <div>
               <label class="block text-sm font-semibold mb-2">{{ t('login.password') }}</label>
-              <input v-model="password" type="password" :placeholder="t('login.password')" class="w-full p-4 text-lg border border-gray-300 rounded-sm" />
+              <div class="relative w-full">
+                <input 
+                  v-model="password" 
+                  :type="showPassword ? 'text' : 'password'" 
+                  :placeholder="t('login.password')" 
+                  class="w-full p-4 text-lg border border-gray-300 rounded-sm pr-12" 
+                />
+                <button
+                  type="button"
+                  @click="showPassword = !showPassword"
+                  class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 p-2 transition duration-200"
+                  :title="showPassword ? t('login.hidePassword', 'Password verbergen') : t('login.showPassword', 'Password anzeigen')"
+                >
+                  <svg v-if="showPassword" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"></path>
+                    <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"></path>
+                  </svg>
+                  <svg v-else class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clip-rule="evenodd"></path>
+                    <path d="M15.171 13.576l1.473 1.473A10.016 10.016 0 0019.542 10c-1.274-4.057-5.064-7-9.542-7a9.958 9.958 0 00-2.037.242l1.472 1.472a2 2 0 129.338 3.39z"></path>
+                  </svg>
+                </button>
+              </div>
             </div>
             <div class="flex justify-center">
               <button :disabled="loading" class="bg-black text-white px-8 py-3 rounded-sm text-lg font-medium disabled:opacity-50">
@@ -53,6 +75,7 @@ export default {
   setup() {
     const email = ref('')
     const password = ref('')
+    const showPassword = ref(false)
     const router = useRouter()
     const { setToken } = useAuth()
     const { t } = useI18n()
@@ -96,7 +119,7 @@ export default {
       }
     }
 
-    return { email, password, onSubmit, t, loading, errorMsg }
+    return { email, password, onSubmit, t, loading, errorMsg, showPassword }
   }
 }
 </script>

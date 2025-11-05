@@ -1,0 +1,88 @@
+version: '3.8'
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        - SKIP_TRANSCODE=1
+    image: reste-rampe-frontend:latest
+    container_name: reste-rampe-frontend
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - VITE_API_URL=${VITE_API_URL:-https://api.reste-rampe.local/api}
+    networks:
+      - reste_net
+    depends_on:
+      - backend
+    restart: always
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - ./certbot:/var/www/certbot:ro
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: reste-rampe-backend:latest
+    container_name: reste-rampe-backend
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - ENV=production
+      - MAILCOW_API_URL=${MAILCOW_API_URL}
+      - MAILCOW_API_KEY=${MAILCOW_API_KEY}
+      - MAILCOW_DOMAIN=${MAILCOW_DOMAIN}
+      - MAILCOW_VERIFY_SSL=${MAILCOW_VERIFY_SSL}
+      - MAILCOW_SMTP_HOST=${MAILCOW_SMTP_HOST}
+      - MAILCOW_SMTP_PORT=${MAILCOW_SMTP_PORT}
+      - MAILCOW_SMTP_USER=${MAILCOW_SMTP_USER}
+      - MAILCOW_SMTP_PASSWORD=${MAILCOW_SMTP_PASSWORD}
+      - FROM_EMAIL=${FROM_EMAIL}
+      - FROM_NAME=${FROM_NAME}
+      - FRONTEND_URL=${FRONTEND_URL}
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    networks:
+      - reste_net
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  db:
+    image: postgres:15-alpine
+    container_name: reste-rampe-db
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - reste_net
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  db-data:
+    driver: local
+
+networks:
+  reste_net:
+    driver: bridge

@@ -13,6 +13,7 @@
     "news": "Nachrichten",
     "privacy": "Datenschutz",
     "pages": "Seiten",
+    "mailbox": "Mailbox",
     "admin": "Admin",
     "manageUsers": "Benutzer verwalten",
     "manageNews": "Nachrichten verwalten",
@@ -219,6 +220,26 @@
       "preview": "Vorschau"
     }
   },
+  "mailbox": {
+    "noMailbox": "Du hast noch keine Mailbox",
+    "createMailboxDesc": "Erstelle deine persönliche Mailbox und erhalte eine E-Mail-Adresse auf der Domäne reste-rampe.tech",
+    "createMailbox": "Mailbox erstellen",
+    "emailAddress": "E-Mail Adresse",
+    "emailFixed": "Diese E-Mail-Adresse wird automatisch generiert",
+    "password": "Passwort",
+    "passwordInfo": "Mindestens 12 Zeichen erforderlich. Dies ist dein Passwort für die Mailbox.",
+    "mailboxStatus": "Mailbox Status",
+    "active": "Aktiv",
+    "inactive": "Inaktiv",
+    "storage": "Speicherplatz",
+    "used": "benutzt",
+    "createdAt": "Erstellt am",
+    "forwardingRules": "Weiterleitungsregeln",
+    "noForwarding": "Keine Weiterleitungen konfiguriert",
+    "deleteMailbox": "Mailbox löschen",
+    "deleteWarning": "Achtung: Das Löschen der Mailbox ist nicht rückgängig zu machen. Alle E-Mails gehen verloren.",
+    "deleteConfirm": "Bist du sicher, dass du deine Mailbox löschen möchtest? Diese Aktion kann nicht rückgängig gemacht werden."
+  },
   "footer": {
     "legal": "Rechtliches",
     "imprint": "Impressum",
@@ -230,15 +251,21 @@
     "save": "Speichern",
     "cancel": "Abbrechen",
     "delete": "Löschen",
+    "deleting": "Wird gelöscht",
     "edit": "Bearbeiten",
     "add": "Hinzufügen",
     "back": "Zurück",
     "backHome": "Zur Startseite",
     "backOverview": "Zurück zur Übersicht",
     "loading": "Lädt...",
+    "creating": "Wird erstellt",
     "error": "Fehler",
     "success": "Erfolg",
     "noData": "Keine Daten vorhanden",
-    "actions": "Aktionen"
+    "actions": "Aktionen",
+    "retry": "Erneut versuchen",
+    "confirm": "Bestätigung",
+    "dangerZone": "Gefahrenzone",
+    "remove": "Entfernen"
   }
 }

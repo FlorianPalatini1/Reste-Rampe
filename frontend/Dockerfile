@@ -38,8 +38,8 @@ RUN if [ -d ./node_modules/.bin ]; then chmod -R a+x ./node_modules/.bin || true
 RUN npm run build
 
 FROM nginx:1.25-alpine
-# Copy custom nginx config (located at project root ./nginx/default.conf)
-COPY nginx/default.conf /etc/nginx/conf.d/default.conf
+# Copy custom nginx config
+COPY nginx/conf.d/default.conf /etc/nginx/conf.d/default.conf
 # Copy built static files from the build stage
 COPY --from=build /app/dist /usr/share/nginx/html
 EXPOSE 80

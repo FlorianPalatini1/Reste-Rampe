@@ -5,11 +5,13 @@ import ShoppingLists from '../views/ShoppingLists.vue'
 import Recipes from '../views/Recipes.vue'
 import Login from '../views/Login.vue'
 import Register from '../views/Register.vue'
+import VerifyEmail from '../views/VerifyEmail.vue'
 import News from '../views/News.vue'
 import NewsDetail from '../views/NewsDetail.vue'
 import Privacy from '../views/Privacy.vue'
 import AdminUsers from '../views/AdminUsers.vue'
 import AdminPages from '../views/AdminPages.vue'
+import MailboxManagement from '../views/MailboxManagement.vue'
 import LandingAnimation from '../views/LandingAnimation.vue'
 import { getToken, useAuth } from '../stores/auth'
 import api from '../lib/api'
@@ -43,6 +45,11 @@ const router = createRouter({
       component: Recipes
     },
     {
+      path: '/mailbox',
+      name: 'mailbox',
+      component: MailboxManagement
+    },
+    {
       path: '/login',
       name: 'login',
       component: Login
@@ -51,6 +58,11 @@ const router = createRouter({
       path: '/register',
       name: 'register',
       component: Register
+    },
+    {
+      path: '/verify-email',
+      name: 'verify-email',
+      component: VerifyEmail
     },
     {
       path: '/news',
@@ -122,7 +134,7 @@ const router = createRouter({
 
 // simple global guard: redirect to /login if route is protected and no token
 router.beforeEach(async (to, from, next) => {
-  const publicPages = ['login', 'register', 'news', 'news-detail', 'privacy', 'imprint', 'terms', 'agb', 'landing', 'landing-root']
+  const publicPages = ['login', 'register', 'verify-email', 'news', 'news-detail', 'privacy', 'imprint', 'terms', 'agb', 'landing', 'landing-root']
   const { state, setToken } = useAuth()
   if (publicPages.includes(to.name)) return next()
 
