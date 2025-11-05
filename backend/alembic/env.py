@@ -24,7 +24,10 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # Model's MetaData object for 'autogenerate' support
-from app.models import Base
+try:
+    from app.models import Base
+except ModuleNotFoundError:
+    from models import Base
 target_metadata = Base.metadata
 
 
